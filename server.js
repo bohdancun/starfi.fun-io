@@ -119,6 +119,12 @@ function upgradeGoldCost(currentLevel) {
   return Math.floor(50 * Math.pow(1.5, currentLevel));
 }
 
+// --- Network optimisation constants ---
+const VIEW_RANGE = 1600; // world units sent to each client
+const NET_RATE   = 3;    // send every Nth physics tick → 20 Hz
+const SLOW_RATE  = 6;    // rocks/gems/xp every Nth → 10 Hz
+let   physTick   = 0;
+
 // --- Rock texture manifest ---
 const ROCK_TEXTURES = readdirSync(join(__dirname, 'public/textures/rocks'))
   .filter(f => f.endsWith('.svg'))
@@ -734,6 +740,7 @@ function checkPlayerRockCollisions() {
 // --- main loop ---
 
 function tick() {
+  physTick++;
   updatePlayers();
   updateRocks();
   updateBullets();
@@ -741,14 +748,36 @@ function tick() {
   updateXpDrops();
   checkPlayerRockCollisions();
 
-  broadcast({
-    type: 'tick',
-    players: Array.from(players.values()).map(serialize),
-    rocks: rocks.map(serializeRock),
-    gems: gems.map(g => ({ id: g.id, x: g.x, y: g.y, r: g.r })),
-    xpDrops: xpDrops.map(x => ({ id: x.id, x: x.x, y: x.y, r: x.r })),
-    bullets: bullets.map(b => ({ id: b.id, x: b.x, y: b.y, ownerId: b.ownerId, angle: Math.atan2(b.vy, b.vx) })),
-  });
+  if (physTick % NET_RATE !== 0) return;
+
+  const sendSlow   = physTick % SLOW_RATE === 0;
+  const allPlayers = Array.from(players.values()).map(serialize);
+
+  for (const [, p] of players) {
+    if (!wsReady(p.ws)) continue;
+
+    const msg = {
+      type: 'tick',
+      players: allPlayers,
+      bullets: bullets
+        .filter(b => torusDist(p.x, p.y, b.x, b.y) < VIEW_RANGE)
+        .map(b => ({ id: b.id, x: b.x, y: b.y, ownerId: b.ownerId, angle: Math.atan2(b.vy, b.vx) })),
+    };
+
+    if (sendSlow) {
+      msg.rocks = rocks
+        .filter(r => torusDist(p.x, p.y, r.x, r.y) < VIEW_RANGE)
+        .map(serializeRock);
+      msg.gems = gems
+        .filter(g => torusDist(p.x, p.y, g.x, g.y) < VIEW_RANGE)
+        .map(g => ({ id: g.id, x: g.x, y: g.y, r: g.r }));
+      msg.xpDrops = xpDrops
+        .filter(x => torusDist(p.x, p.y, x.x, x.y) < VIEW_RANGE)
+        .map(x => ({ id: x.id, x: x.x, y: x.y, r: x.r }));
+    }
+
+    send(p.ws, msg);
+  }
 }
 
 initRocks();

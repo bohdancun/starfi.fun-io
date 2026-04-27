@@ -258,11 +258,10 @@ function handleMessage(event) {
   }
 
   else if (msg.type === 'tick') {
-    serverRocks = msg.rocks;
-    syncRockAppearance(serverRocks);
-    serverGems = msg.gems;
-    serverXpDrops = msg.xpDrops || [];
-    serverBullets = msg.bullets;
+    if (msg.rocks    !== undefined) { serverRocks = msg.rocks; syncRockAppearance(serverRocks); }
+    if (msg.gems     !== undefined) serverGems    = msg.gems;
+    if (msg.xpDrops  !== undefined) serverXpDrops = msg.xpDrops || [];
+    serverBullets = msg.bullets || [];
 
     const seen = new Set();
     for (const p of msg.players) {
