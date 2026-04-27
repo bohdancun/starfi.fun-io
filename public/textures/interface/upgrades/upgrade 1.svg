@@ -1,0 +1,64 @@
+<svg width="80" height="112" viewBox="0 0 80 112" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_42_2626)">
+<rect x="2" y="2" width="76" height="108" rx="14" fill="black" stroke="white" stroke-width="4"/>
+<g clip-path="url(#clip1_42_2626)">
+<rect x="57.5" y="67.5" width="5" height="15" rx="2.5" stroke="#D9D9D9"/>
+</g>
+<g clip-path="url(#clip2_42_2626)">
+<rect x="49.5" y="67.5" width="5" height="15" rx="2.5" stroke="#D9D9D9"/>
+</g>
+<g clip-path="url(#clip3_42_2626)">
+<path d="M30 50L33 46H37L40 51L43 46H47L50 50V56L42 64H38L30 56V50Z" fill="#D9D9D9"/>
+</g>
+<g clip-path="url(#clip4_42_2626)">
+<path d="M18 32L21 28H25L28 33L31 28H35L38 32V38L30 46H26L18 38V32Z" fill="#D9D9D9"/>
+</g>
+<g clip-path="url(#clip5_42_2626)">
+<path d="M42 32L45 28H49L52 33L55 28H59L62 32V38L54 46H50L42 38V32Z" fill="#D9D9D9"/>
+</g>
+<g clip-path="url(#clip6_42_2626)">
+<rect x="41" y="67" width="6" height="16" rx="3" fill="#D9D9D9"/>
+</g>
+<g clip-path="url(#clip7_42_2626)">
+<rect x="33" y="67" width="6" height="16" rx="3" fill="#D9D9D9"/>
+</g>
+<g clip-path="url(#clip8_42_2626)">
+<rect x="25" y="67" width="6" height="16" rx="3" fill="#D9D9D9"/>
+</g>
+<g clip-path="url(#clip9_42_2626)">
+<rect x="17" y="67" width="6" height="16" rx="3" fill="#D9D9D9"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_42_2626">
+<rect width="80" height="112" fill="white"/>
+</clipPath>
+<clipPath id="clip1_42_2626">
+<rect width="6" height="16" fill="white" transform="translate(57 67)"/>
+</clipPath>
+<clipPath id="clip2_42_2626">
+<rect width="6" height="16" fill="white" transform="translate(49 67)"/>
+</clipPath>
+<clipPath id="clip3_42_2626">
+<rect width="20" height="18" fill="white" transform="translate(30 46)"/>
+</clipPath>
+<clipPath id="clip4_42_2626">
+<rect width="20" height="18" fill="white" transform="translate(18 28)"/>
+</clipPath>
+<clipPath id="clip5_42_2626">
+<rect width="20" height="18" fill="white" transform="translate(42 28)"/>
+</clipPath>
+<clipPath id="clip6_42_2626">
+<rect width="6" height="16" fill="white" transform="translate(41 67)"/>
+</clipPath>
+<clipPath id="clip7_42_2626">
+<rect width="6" height="16" fill="white" transform="translate(33 67)"/>
+</clipPath>
+<clipPath id="clip8_42_2626">
+<rect width="6" height="16" fill="white" transform="translate(25 67)"/>
+</clipPath>
+<clipPath id="clip9_42_2626">
+<rect width="6" height="16" fill="white" transform="translate(17 67)"/>
+</clipPath>
+</defs>
+</svg>

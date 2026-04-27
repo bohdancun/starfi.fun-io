@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Starship.io</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        @font-face {
+            font-family: 'JetBrainsMono';
+            src: url('/fonts/JetBrainsMono-Regular.woff2') format('woff2');
+            font-weight: normal;
+        }
+        @font-face {
+            font-family: 'JetBrainsSans';
+            src: url('/fonts/JetBrainsSans-Regular.woff2') format('woff2');
+            font-weight: normal;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            overflow: hidden;
+            font-family: 'JetBrainsSans', system-ui, sans-serif;
+        }
+
+        canvas { display: block; }
+
+        /* ── Menu overlay ── */
+        #menu {
+            position: fixed;
+            inset: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .menu-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            padding: 48px 56px;
+            background: rgba(0, 0, 0, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 20px;
+            backdrop-filter: blur(4px);
+            min-width: 340px;
+        }
+
+        .game-title {
+            margin: 0 0 16px;
+            font-family: 'JetBrainsMono', monospace;
+            font-size: 36px;
+            font-weight: normal;
+            letter-spacing: 6px;
+            color: #fff;
+            text-transform: uppercase;
+        }
+
+        .menu-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: #fff;
+            font-family: 'JetBrainsSans', system-ui, sans-serif;
+            font-size: 15px;
+            outline: none;
+            text-align: center;
+            transition: border-color 0.15s;
+        }
+        .menu-input::placeholder { color: rgba(255,255,255,0.3); }
+        .menu-input:focus { border-color: rgba(255,255,255,0.55); }
+
+        .btn-play {
+            width: 100%;
+            padding: 14px;
+            background: #fff;
+            border: none;
+            border-radius: 10px;
+            color: #000;
+            font-family: 'JetBrainsMono', monospace;
+            font-size: 16px;
+            letter-spacing: 4px;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+        }
+        .btn-play:hover  { background: #e0e0e0; }
+        .btn-play:active { transform: scale(0.97); }
+
+        .menu-secondary {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .btn-secondary {
+            flex: 1;
+            padding: 11px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 10px;
+            color: rgba(255, 255, 255, 0.75);
+            font-family: 'JetBrainsSans', system-ui, sans-serif;
+            font-size: 13px;
+            cursor: pointer;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .btn-secondary:hover {
+            border-color: rgba(255,255,255,0.6);
+            color: #fff;
+        }
+
+        /* ── Account modal ── */
+        #account-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 20;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.5);
+        }
+        #account-modal.open { display: flex; }
+
+        .account-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 36px 40px;
+            background: rgba(10,10,10,0.95);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 20px;
+            backdrop-filter: blur(8px);
+            min-width: 320px;
+        }
+
+        .account-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 8px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 8px;
+            color: rgba(255,255,255,0.5);
+            font-family: 'JetBrainsSans', system-ui, sans-serif;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .tab-btn.active {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.5);
+            color: #fff;
+        }
+
+        .account-title {
+            margin: 0 0 4px;
+            font-family: 'JetBrainsMono', monospace;
+            font-size: 18px;
+            font-weight: normal;
+            color: #fff;
+            letter-spacing: 2px;
+            text-align: center;
+        }
+
+        .account-error {
+            color: #f87171;
+            font-size: 12px;
+            text-align: center;
+            min-height: 16px;
+        }
+
+        .account-logged-in {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+        }
+        .account-username {
+            font-family: 'JetBrainsMono', monospace;
+            font-size: 20px;
+            color: #fff;
+        }
+        .account-sub {
+            font-size: 12px;
+            color: rgba(255,255,255,0.45);
+        }
+
+        .btn-close-modal {
+            align-self: flex-end;
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.4);
+            font-size: 20px;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0;
+            margin-bottom: -4px;
+        }
+        .btn-close-modal:hover { color: #fff; }
+    </style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="menu">
+    <div class="menu-panel">
+        <h1 class="game-title">Starship.io</h1>
+        <input id="nickname" class="menu-input" type="text"
+               placeholder="Enter nickname" maxlength="20" autocomplete="off" />
+        <button id="btn-play" class="btn-play">PLAY</button>
+        <div class="menu-secondary">
+            <button class="btn-secondary" id="btn-settings">Settings</button>
+            <button class="btn-secondary" id="btn-account">Account</button>
+        </div>
+    </div>
+</div>
+
+<!-- Account modal -->
+<div id="account-modal">
+    <div class="account-panel">
+        <button class="btn-close-modal" id="btn-close-account">✕</button>
+
+        <!-- Logged-in state -->
+        <div id="account-loggedin" style="display:none">
+            <h2 class="account-title">ACCOUNT</h2>
+            <div class="account-logged-in">
+                <div class="account-username" id="account-display-name"></div>
+                <div class="account-sub">Progress saves automatically</div>
+                <button class="btn-play" style="width:100%;margin-top:8px" id="btn-logout">LOG OUT</button>
+            </div>
+        </div>
+
+        <!-- Auth forms -->
+        <div id="account-auth">
+            <h2 class="account-title" style="margin-bottom:12px">ACCOUNT</h2>
+            <div class="account-tabs">
+                <button class="tab-btn active" id="tab-login">Login</button>
+                <button class="tab-btn" id="tab-register">Register</button>
+            </div>
+            <input id="auth-username" class="menu-input" type="text"
+                   placeholder="Username" maxlength="20" autocomplete="off" />
+            <input id="auth-password" class="menu-input" type="password"
+                   placeholder="Password" autocomplete="off" />
+            <div class="account-error" id="auth-error"></div>
+            <button class="btn-play" id="btn-auth-submit">LOGIN</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
