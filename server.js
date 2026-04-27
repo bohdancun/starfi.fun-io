@@ -121,8 +121,8 @@ function upgradeGoldCost(currentLevel) {
 
 // --- Network optimisation constants ---
 const VIEW_RANGE = 1600; // world units sent to each client
-const NET_RATE   = 3;    // send every Nth physics tick → 20 Hz
-const SLOW_RATE  = 6;    // rocks/gems/xp every Nth → 10 Hz
+const NET_RATE   = 2;    // send every Nth physics tick → 30 Hz
+const SLOW_RATE  = 4;    // rocks/gems/xp every Nth → 15 Hz
 let   physTick   = 0;
 
 // --- Rock texture manifest ---
@@ -761,7 +761,7 @@ function tick() {
       players: allPlayers,
       bullets: bullets
         .filter(b => torusDist(p.x, p.y, b.x, b.y) < VIEW_RANGE)
-        .map(b => ({ id: b.id, x: b.x, y: b.y, ownerId: b.ownerId, angle: Math.atan2(b.vy, b.vx) })),
+        .map(b => ({ id: b.id, x: b.x, y: b.y, vx: b.vx, vy: b.vy, ownerId: b.ownerId, angle: Math.atan2(b.vy, b.vx) })),
     };
 
     if (sendSlow) {
@@ -770,10 +770,10 @@ function tick() {
         .map(serializeRock);
       msg.gems = gems
         .filter(g => torusDist(p.x, p.y, g.x, g.y) < VIEW_RANGE)
-        .map(g => ({ id: g.id, x: g.x, y: g.y, r: g.r }));
+        .map(g => ({ id: g.id, x: g.x, y: g.y, r: g.r, vx: g.vx, vy: g.vy }));
       msg.xpDrops = xpDrops
         .filter(x => torusDist(p.x, p.y, x.x, x.y) < VIEW_RANGE)
-        .map(x => ({ id: x.id, x: x.x, y: x.y, r: x.r }));
+        .map(x => ({ id: x.id, x: x.x, y: x.y, r: x.r, vx: x.vx, vy: x.vy }));
     }
 
     send(p.ws, msg);

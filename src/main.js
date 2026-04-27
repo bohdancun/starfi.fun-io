@@ -258,17 +258,24 @@ function handleMessage(event) {
   }
 
   else if (msg.type === 'tick') {
-    if (msg.rocks    !== undefined) { serverRocks = msg.rocks; syncRockAppearance(serverRocks); }
-    if (msg.gems     !== undefined) serverGems    = msg.gems;
-    if (msg.xpDrops  !== undefined) serverXpDrops = msg.xpDrops || [];
-    serverBullets = msg.bullets || [];
+    if (msg.rocks   !== undefined) { serverRocks = msg.rocks; syncRockAppearance(serverRocks); }
+    if (msg.gems    !== undefined) serverGems    = msg.gems;
+    if (msg.xpDrops !== undefined) serverXpDrops = msg.xpDrops || [];
+
+    // Merge bullets — preserve existing extrapolated positions for bullets we already know
+    if (msg.bullets) {
+      const incoming = new Map(msg.bullets.map(b => [b.id, b]));
+      serverBullets = msg.bullets.map(b => {
+        const old = serverBullets.find(ob => ob.id === b.id);
+        return old ? { ...b, x: old.x, y: old.y } : b;
+      });
+    }
 
     const seen = new Set();
     for (const p of msg.players) {
       if (p.id === myId) {
-        // Smooth reconciliation (toroidal shortest path)
-        localPlayer.x += torusDelta(p.x, localPlayer.x, WORLD_W) * 0.3;
-        localPlayer.y += torusDelta(p.y, localPlayer.y, WORLD_H) * 0.3;
+        localPlayer.x += torusDelta(p.x, localPlayer.x, WORLD_W) * 0.15;
+        localPlayer.y += torusDelta(p.y, localPlayer.y, WORLD_H) * 0.15;
         localPlayer.hp = p.hp;
         localPlayer.maxHp = p.maxHp;
         localPlayer.dead = p.dead;
@@ -283,7 +290,13 @@ function handleMessage(event) {
         localPlayer.shipType = p.shipType || 'basic';
         if (p.dead) { localPlayer.vx = 0; localPlayer.vy = 0; }
       } else {
-        remotePlayers.set(p.id, p);
+        const existing = remotePlayers.get(p.id);
+        // Keep smooth render position, snap target to server authority
+        remotePlayers.set(p.id, {
+          ...p,
+          renderX: existing ? existing.renderX : p.x,
+          renderY: existing ? existing.renderY : p.y,
+        });
         seen.add(p.id);
       }
     }
@@ -381,6 +394,46 @@ function update(dt) {
 
   inputTimer += dt;
   if (inputTimer >= INPUT_INTERVAL) { sendInput(); inputTimer = 0; }
+
+  // Interpolate remote players toward server-authoritative position
+  for (const [, p] of remotePlayers) {
+    if (p.renderX === undefined) { p.renderX = p.x; p.renderY = p.y; continue; }
+    p.renderX += torusDelta(p.x, p.renderX, WORLD_W) * Math.min(1, 14 * dt);
+    p.renderY += torusDelta(p.y, p.renderY, WORLD_H) * Math.min(1, 14 * dt);
+  }
+
+  // Extrapolate bullets client-side
+  for (const b of serverBullets) {
+    b.x = ((b.x + b.vx * dt) % WORLD_W + WORLD_W) % WORLD_W;
+    b.y = ((b.y + b.vy * dt) % WORLD_H + WORLD_H) % WORLD_H;
+  }
+
+  // Extrapolate gems with drag
+  for (const g of serverGems) {
+    if (g.vx === undefined) continue;
+    g.x = ((g.x + g.vx * dt) % WORLD_W + WORLD_W) % WORLD_W;
+    g.y = ((g.y + g.vy * dt) % WORLD_H + WORLD_H) % WORLD_H;
+    g.vx *= Math.exp(-3 * dt);
+    g.vy *= Math.exp(-3 * dt);
+  }
+
+  // Extrapolate xp drops with drag
+  for (const x of serverXpDrops) {
+    if (x.vx === undefined) continue;
+    x.x = ((x.x + x.vx * dt) % WORLD_W + WORLD_W) % WORLD_W;
+    x.y = ((x.y + x.vy * dt) % WORLD_H + WORLD_H) % WORLD_H;
+    x.vx *= Math.exp(-3 * dt);
+    x.vy *= Math.exp(-3 * dt);
+  }
+
+  // Extrapolate rocks with drag
+  for (const r of serverRocks) {
+    if (!r.vx && !r.vy) continue;
+    r.x = ((r.x + r.vx * dt) % WORLD_W + WORLD_W) % WORLD_W;
+    r.y = ((r.y + r.vy * dt) % WORLD_H + WORLD_H) % WORLD_H;
+    r.vx *= Math.exp(-1.8 * dt);
+    r.vy *= Math.exp(-1.8 * dt);
+  }
 
   for (const s of stars) {
     s.x = (s.x + s.vx * dt + canvas.width)  % canvas.width;
@@ -616,8 +669,10 @@ function drawRemotePlayers(camX, camY) {
   for (const [, p] of remotePlayers) {
     if (p.dead) continue;
 
-    const dx = torusDelta(p.x, camX, WORLD_W);
-    const dy = torusDelta(p.y, camY, WORLD_H);
+    const rx = p.renderX ?? p.x;
+    const ry = p.renderY ?? p.y;
+    const dx = torusDelta(rx, camX, WORLD_W);
+    const dy = torusDelta(ry, camY, WORLD_H);
     const sx = canvas.width / 2 + dx;
     const sy = canvas.height / 2 + dy;
 
