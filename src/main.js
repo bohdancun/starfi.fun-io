@@ -463,7 +463,7 @@ function drawXpBar(centerX, topY, radius, totalXp) {
   ctx.lineWidth = 1;
   ctx.strokeRect(x, topY, w, h);
 
-  ctx.font = 'bold 10px system-ui';
+  ctx.font = 'bold 10px Ticketing';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
@@ -854,7 +854,7 @@ function drawUpgradeBar() {
       ctx.fillRect(bx + 12, by + 8, btnW - 24, 4);
 
       // Key number
-      ctx.font = 'bold 10px system-ui';
+      ctx.font = 'bold 10px Ticketing';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       ctx.fillStyle = 'rgba(255,255,255,0.4)';
@@ -864,7 +864,7 @@ function drawUpgradeBar() {
       const words = def.label.split(' ');
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.font = '11px system-ui';
+      ctx.font = '11px Ticketing';
       ctx.fillStyle = maxed ? 'rgba(255,215,0,0.9)' : 'rgba(255,255,255,0.88)';
       if (words.length >= 2) {
         ctx.fillText(words[0],               bx + btnW / 2, by + 36);
@@ -893,7 +893,7 @@ function drawUpgradeBar() {
       }
 
       // Cost / MAX
-      ctx.font = '11px system-ui';
+      ctx.font = '11px Ticketing';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       if (maxed) {
@@ -918,7 +918,7 @@ function drawUpgradeBar() {
 function drawHUD() {
   const pad = 16;
 
-  ctx.font = "20px system-ui";
+  ctx.font = "20px Ticketing";
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
   ctx.fillStyle = "#facc15";
@@ -930,7 +930,7 @@ function drawHUD() {
   ctx.fillStyle = "#818cf8";
   ctx.fillText(`Points: ${localPlayer.upgradePoints}`, pad, pad + 56);
 
-  ctx.font = "14px system-ui";
+  ctx.font = "14px Ticketing";
   ctx.fillStyle = "rgba(255,255,255,0.6)";
   ctx.fillText(`Players online: ${remotePlayers.size + 1}`, pad, pad + 84);
 
@@ -950,11 +950,11 @@ function drawDeathScreen() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  ctx.font = "bold 64px system-ui";
+  ctx.font = "bold 64px Ticketing";
   ctx.fillStyle = "#ef4444";
   ctx.fillText("YOU DIED", canvas.width / 2, canvas.height / 2 - 44);
 
-  ctx.font = "24px system-ui";
+  ctx.font = "24px Ticketing";
   ctx.fillStyle = "rgba(255,255,255,0.8)";
   ctx.fillText(
     `Respawning in ${Math.ceil(Math.max(0, localPlayer.respawnTimer))}s...`,
@@ -970,7 +970,7 @@ function drawConnecting() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = "28px system-ui";
+  ctx.font = "28px Ticketing";
   ctx.fillStyle = "rgba(255,255,255,0.8)";
   ctx.fillText("Connecting to server...", canvas.width / 2, canvas.height / 2);
   ctx.textAlign = "left";
@@ -1032,12 +1032,55 @@ document.getElementById('btn-play').addEventListener('click', () => {
   const storedName = localStorage.getItem('starship_username');
   const nickname = storedName || document.getElementById('nickname').value.trim();
   document.getElementById('menu').style.display = 'none';
+  document.getElementById('menu-topleft').style.display = 'none';
   connectToGame(nickname);
 });
 
 document.getElementById('nickname').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('btn-play').click();
 });
+
+// --- Color picker ---
+const SHIP_COLORS = [
+  '#ef4444','#f97316','#eab308','#22c55e',
+  '#06b6d4','#3b82f6','#a855f7','#ec4899',
+  '#14b8a6','#f59e0b','#FCAFFF','#ffffff',
+];
+
+let selectedColor = localStorage.getItem('starship_color') || '#FCAFFF';
+const colorBtn    = document.getElementById('btn-color');
+const colorPopup  = document.getElementById('color-picker-popup');
+
+function applyColor(c) {
+  selectedColor = c;
+  colorBtn.style.background = c;
+  localStorage.setItem('starship_color', c);
+  document.querySelectorAll('.color-swatch').forEach(s => {
+    s.classList.toggle('active', s.dataset.color === c);
+  });
+}
+
+SHIP_COLORS.forEach(c => {
+  const sw = document.createElement('button');
+  sw.className = 'color-swatch';
+  sw.dataset.color = c;
+  sw.style.background = c;
+  sw.addEventListener('click', () => { applyColor(c); colorPopup.classList.remove('open'); });
+  colorPopup.appendChild(sw);
+});
+
+applyColor(selectedColor);
+
+colorBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  colorPopup.classList.toggle('open');
+  if (colorPopup.classList.contains('open')) {
+    const rect = colorBtn.getBoundingClientRect();
+    colorPopup.style.left = rect.left + 'px';
+    colorPopup.style.top  = (rect.top - colorPopup.offsetHeight - 8) + 'px';
+  }
+});
+document.addEventListener('click', () => colorPopup.classList.remove('open'));
 
 // --- Account modal ---
 
@@ -1120,3 +1163,12 @@ document.getElementById('btn-logout').addEventListener('click', () => {
 // Pre-fill nickname if already logged in
 const savedUsername = localStorage.getItem('starship_username');
 if (savedUsername) document.getElementById('nickname').value = savedUsername;
+
+// Custom placeholder show/hide
+const nicknameInput = document.getElementById('nickname');
+const nicknamePlaceholder = document.getElementById('nickname-placeholder');
+function syncPlaceholder() {
+  nicknamePlaceholder.style.display = nicknameInput.value ? 'none' : 'block';
+}
+nicknameInput.addEventListener('input', syncPlaceholder);
+syncPlaceholder();

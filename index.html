@@ -2,17 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8"/>
-    <title>Starship.io</title>
+    <title>starfi.fun</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
         @font-face {
-            font-family: 'JetBrainsMono';
-            src: url('/fonts/JetBrainsMono-Regular.woff2') format('woff2');
-            font-weight: normal;
-        }
-        @font-face {
-            font-family: 'JetBrainsSans';
-            src: url('/fonts/JetBrainsSans-Regular.woff2') format('woff2');
+            font-family: 'Ticketing';
+            src: url('/fonts/Ticketing.woff2') format('woff2'),
+                 url('/fonts/Ticketing.ttf') format('truetype');
             font-weight: normal;
         }
 
@@ -23,98 +19,154 @@
             padding: 0;
             background: #000;
             overflow: hidden;
-            font-family: 'JetBrainsSans', system-ui, sans-serif;
+            font-family: 'Ticketing', system-ui, sans-serif;
         }
 
         canvas { display: block; }
 
-        /* ── Menu overlay ── */
+        /* ── Top-left icon buttons ── */
+        #menu-topleft {
+            position: fixed;
+            top: 32px;
+            left: 32px;
+            z-index: 10;
+            display: flex;
+            gap: 16px;
+        }
+
+        .icon-btn {
+            width: 64px;
+            height: 64px;
+            background: #000;
+            border: 4px solid #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+        .icon-btn:hover { background: rgba(255,255,255,0.1); }
+        .icon-btn:active { transform: scale(0.95); }
+
+        /* ── Center menu ── */
         #menu {
             position: fixed;
             inset: 0;
             z-index: 10;
             display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .menu-panel {
-            display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 16px;
-            padding: 48px 56px;
-            background: rgba(0, 0, 0, 0.72);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 20px;
-            backdrop-filter: blur(4px);
-            min-width: 340px;
+            justify-content: center;
+            gap: 0;
+            pointer-events: none;
         }
+        #menu > * { pointer-events: all; }
 
         .game-title {
-            margin: 0 0 16px;
-            font-family: 'JetBrainsMono', monospace;
-            font-size: 36px;
+            font-family: 'Ticketing', monospace;
+            font-size: 56px;
             font-weight: normal;
-            letter-spacing: 6px;
             color: #fff;
-            text-transform: uppercase;
+            margin: 0 0 6px 0;
+            letter-spacing: 2px;
+        }
+
+        .nickname-wrapper {
+            position: relative;
+            width: 394px;
+            height: 61px;
+            margin-bottom: 17px;
         }
 
         .menu-input {
             width: 100%;
-            padding: 12px 16px;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
+            height: 100%;
+            padding: 8px 8px 8px 8px;
+            background: #000;
+            border: 3px solid #fff;
+            border-radius: 6.5px;
             color: #fff;
-            font-family: 'JetBrainsSans', system-ui, sans-serif;
-            font-size: 15px;
+            font-family: 'Ticketing', monospace;
+            font-size: 48px;
+            line-height: 1;
             outline: none;
-            text-align: center;
-            transition: border-color 0.15s;
         }
-        .menu-input::placeholder { color: rgba(255,255,255,0.3); }
-        .menu-input:focus { border-color: rgba(255,255,255,0.55); }
+        .menu-input:focus { border-color: rgba(255,255,255,0.75); }
+
+        .nickname-placeholder {
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            font-family: 'Ticketing', monospace;
+            font-size: 20px;
+            color: rgba(255,255,255,0.35);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .menu-play-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
 
         .btn-play {
-            width: 100%;
-            padding: 14px;
-            background: #fff;
-            border: none;
-            border-radius: 10px;
-            color: #000;
-            font-family: 'JetBrainsMono', monospace;
-            font-size: 16px;
-            letter-spacing: 4px;
+            width: 314px;
+            height: 61px;
+            background: #000;
+            border: 3px solid #fff;
+            border-radius: 6.5px;
+            color: #fff;
+            font-family: 'Ticketing', monospace;
+            font-size: 48px;
+            letter-spacing: 1px;
             cursor: pointer;
-            transition: background 0.15s, transform 0.1s;
+            transition: background 0.15s;
         }
-        .btn-play:hover  { background: #e0e0e0; }
+        .btn-play:hover  { background: rgba(255,255,255,0.08); }
         .btn-play:active { transform: scale(0.97); }
 
-        .menu-secondary {
-            display: flex;
-            gap: 12px;
-            width: 100%;
-        }
-
-        .btn-secondary {
-            flex: 1;
-            padding: 11px;
-            background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            border-radius: 10px;
-            color: rgba(255, 255, 255, 0.75);
-            font-family: 'JetBrainsSans', system-ui, sans-serif;
-            font-size: 13px;
+        .btn-color-pick {
+            width: 60px;
+            height: 60px;
+            border: 3px solid #fff;
+            border-radius: 6px;
             cursor: pointer;
-            transition: border-color 0.15s, color 0.15s;
+            background: #FCAFFF;
+            padding: 0;
+            flex-shrink: 0;
+            transition: transform 0.1s;
         }
-        .btn-secondary:hover {
-            border-color: rgba(255,255,255,0.6);
-            color: #fff;
+        .btn-color-pick:hover { transform: scale(1.06); }
+
+        /* ── Color picker popup ── */
+        #color-picker-popup {
+            display: none;
+            position: fixed;
+            z-index: 30;
+            background: rgba(0,0,0,0.92);
+            border: 2px solid rgba(255,255,255,0.25);
+            border-radius: 10px;
+            padding: 10px;
+            gap: 8px;
+            flex-wrap: wrap;
+            width: 168px;
         }
+        #color-picker-popup.open { display: flex; }
+
+        .color-swatch {
+            width: 34px;
+            height: 34px;
+            border-radius: 5px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: transform 0.1s, border-color 0.1s;
+        }
+        .color-swatch:hover  { transform: scale(1.15); }
+        .color-swatch.active { border-color: #fff; }
 
         /* ── Account modal ── */
         #account-modal {
@@ -152,7 +204,7 @@
             border: 1px solid rgba(255,255,255,0.18);
             border-radius: 8px;
             color: rgba(255,255,255,0.5);
-            font-family: 'JetBrainsSans', system-ui, sans-serif;
+            font-family: 'Ticketing', system-ui, sans-serif;
             font-size: 13px;
             cursor: pointer;
             transition: all 0.15s;
@@ -165,7 +217,7 @@
 
         .account-title {
             margin: 0 0 4px;
-            font-family: 'JetBrainsMono', monospace;
+            font-family: 'Ticketing', monospace;
             font-size: 18px;
             font-weight: normal;
             color: #fff;
@@ -188,7 +240,7 @@
             padding: 8px 0;
         }
         .account-username {
-            font-family: 'JetBrainsMono', monospace;
+            font-family: 'Ticketing', monospace;
             font-size: 20px;
             color: #fff;
         }
@@ -209,52 +261,107 @@
             margin-bottom: -4px;
         }
         .btn-close-modal:hover { color: #fff; }
+
+        .auth-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            color: #fff;
+            font-family: 'Ticketing', system-ui, sans-serif;
+            font-size: 15px;
+            outline: none;
+        }
+        .auth-input::placeholder { color: rgba(255,255,255,0.3); }
+        .auth-input:focus { border-color: rgba(255,255,255,0.55); }
+
+        .btn-auth {
+            width: 100%;
+            padding: 14px;
+            background: #fff;
+            border: none;
+            border-radius: 10px;
+            color: #000;
+            font-family: 'Ticketing', monospace;
+            font-size: 16px;
+            letter-spacing: 4px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn-auth:hover { background: #e0e0e0; }
     </style>
 </head>
 <body>
 <canvas id="game"></canvas>
 
+<!-- Top-left icons -->
+<div id="menu-topleft">
+    <!-- Account -->
+    <button class="icon-btn" id="btn-account">
+        <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 40L24 32H40L48 40L56 56H8L16 40Z" fill="white"/>
+            <circle cx="32" cy="24" r="14" fill="white" stroke="black" stroke-width="4"/>
+        </svg>
+    </button>
+    <!-- Settings -->
+    <button class="icon-btn" id="btn-settings">
+        <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 28H16L18 24L12 18L15 15L18 12L24 18L28 16V8H36V16L40 18L46 12L49 15L52 18L46 24L48 28H56V36H48L46 40L52 46L49 49L46 52L40 46L36 48V56H28V48L24 46L18 52L15 49L12 46L18 40L16 36H8V28Z" fill="white"/>
+            <circle cx="32" cy="32" r="8" fill="black"/>
+        </svg>
+    </button>
+    <!-- Discord -->
+    <a class="icon-btn" id="btn-discord" href="#" target="_blank">
+        <svg width="36" height="36" viewBox="0 0 71 55" fill="white" xmlns="http://www.w3.org/2000/svg">
+            <path d="M60.1 4.9A58.5 58.5 0 0 0 45.8.9a.2.2 0 0 0-.2.1 40.7 40.7 0 0 0-1.8 3.7 54 54 0 0 0-16.2 0A37.7 37.7 0 0 0 25.7 1a.2.2 0 0 0-.2-.1A58.3 58.3 0 0 0 11.2 4.9a.2.2 0 0 0-.1.1C1.6 18.7-1 32.2.3 45.5a.2.2 0 0 0 .1.2 58.8 58.8 0 0 0 17.7 9 .2.2 0 0 0 .2-.1 42 42 0 0 0 3.6-5.9.2.2 0 0 0-.1-.3 38.7 38.7 0 0 1-5.5-2.6.2.2 0 0 1 0-.4l1.1-.8a.2.2 0 0 1 .2 0c11.5 5.3 24 5.3 35.4 0a.2.2 0 0 1 .2 0l1.1.8a.2.2 0 0 1 0 .4 36 36 0 0 1-5.5 2.6.2.2 0 0 0-.1.3 47.1 47.1 0 0 0 3.6 5.9.2.2 0 0 0 .2.1 58.6 58.6 0 0 0 17.8-9 .2.2 0 0 0 .1-.2c1.5-15.5-2.5-29-10.6-41a.2.2 0 0 0-.1 0zM23.7 37.3c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2c3.6 0 6.5 3.3 6.4 7.2 0 4-2.8 7.2-6.4 7.2zm23.6 0c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2c3.6 0 6.5 3.3 6.4 7.2 0 4-2.8 7.2-6.4 7.2z"/>
+        </svg>
+    </a>
+</div>
+
+<!-- Center menu -->
 <div id="menu">
-    <div class="menu-panel">
-        <h1 class="game-title">Starship.io</h1>
+    <h1 class="game-title">starfi.fun</h1>
+    <div class="nickname-wrapper">
         <input id="nickname" class="menu-input" type="text"
-               placeholder="Enter nickname" maxlength="20" autocomplete="off" />
-        <button id="btn-play" class="btn-play">PLAY</button>
-        <div class="menu-secondary">
-            <button class="btn-secondary" id="btn-settings">Settings</button>
-            <button class="btn-secondary" id="btn-account">Account</button>
-        </div>
+               maxlength="20" autocomplete="off" />
+        <span class="nickname-placeholder" id="nickname-placeholder">enter your nickname here...</span>
+    </div>
+    <div class="menu-play-row">
+        <button id="btn-play" class="btn-play">play online</button>
+        <button id="btn-color" class="btn-color-pick"></button>
     </div>
 </div>
+
+<!-- Color picker popup -->
+<div id="color-picker-popup"></div>
 
 <!-- Account modal -->
 <div id="account-modal">
     <div class="account-panel">
         <button class="btn-close-modal" id="btn-close-account">✕</button>
 
-        <!-- Logged-in state -->
         <div id="account-loggedin" style="display:none">
             <h2 class="account-title">ACCOUNT</h2>
             <div class="account-logged-in">
                 <div class="account-username" id="account-display-name"></div>
                 <div class="account-sub">Progress saves automatically</div>
-                <button class="btn-play" style="width:100%;margin-top:8px" id="btn-logout">LOG OUT</button>
+                <button class="btn-auth" style="margin-top:8px" id="btn-logout">LOG OUT</button>
             </div>
         </div>
 
-        <!-- Auth forms -->
         <div id="account-auth">
             <h2 class="account-title" style="margin-bottom:12px">ACCOUNT</h2>
             <div class="account-tabs">
                 <button class="tab-btn active" id="tab-login">Login</button>
                 <button class="tab-btn" id="tab-register">Register</button>
             </div>
-            <input id="auth-username" class="menu-input" type="text"
+            <input id="auth-username" class="auth-input" type="text"
                    placeholder="Username" maxlength="20" autocomplete="off" />
-            <input id="auth-password" class="menu-input" type="password"
-                   placeholder="Password" autocomplete="off" />
+            <input id="auth-password" class="auth-input" type="password"
+                   placeholder="Password" autocomplete="off" style="margin-top:8px"/>
             <div class="account-error" id="auth-error"></div>
-            <button class="btn-play" id="btn-auth-submit">LOGIN</button>
+            <button class="btn-auth" id="btn-auth-submit">LOGIN</button>
         </div>
     </div>
 </div>
