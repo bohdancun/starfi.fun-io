@@ -567,6 +567,46 @@ function updateRocks() {
   }
 }
 
+function checkRockRockCollisions() {
+  for (let i = 0; i < rocks.length; i++) {
+    for (let j = i + 1; j < rocks.length; j++) {
+      const a = rocks[i];
+      const b = rocks[j];
+      const dx = torusDelta(a.x, b.x, WORLD_W);
+      const dy = torusDelta(a.y, b.y, WORLD_H);
+      const dist = Math.hypot(dx, dy);
+      const minDist = a.r + b.r;
+
+      if (dist < minDist && dist > 0) {
+        const overlap = minDist - dist;
+        const nx = dx / dist;
+        const ny = dy / dist;
+
+        const mA = a.r * a.r;
+        const mB = b.r * b.r;
+        const invSum = 1 / (mA + mB);
+
+        a.x = wrapX(a.x + nx * overlap * (mB * invSum));
+        a.y = wrapY(a.y + ny * overlap * (mB * invSum));
+        b.x = wrapX(b.x - nx * overlap * (mA * invSum));
+        b.y = wrapY(b.y - ny * overlap * (mA * invSum));
+
+        const relVx = a.vx - b.vx;
+        const relVy = a.vy - b.vy;
+        const relN = relVx * nx + relVy * ny;
+
+        if (relN < 0) {
+          const j = -(1 + 0.4) * relN / (1 / mA + 1 / mB);
+          a.vx += (j / mA) * nx;
+          a.vy += (j / mA) * ny;
+          b.vx -= (j / mB) * nx;
+          b.vy -= (j / mB) * ny;
+        }
+      }
+    }
+  }
+}
+
 function updateBullets() {
   for (let i = bullets.length - 1; i >= 0; i--) {
     const b = bullets[i];
@@ -746,6 +786,7 @@ function tick() {
   physTick++;
   updatePlayers();
   updateRocks();
+  checkRockRockCollisions();
   updateBullets();
   updateGems();
   updateXpDrops();
