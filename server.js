@@ -274,13 +274,15 @@ function initRocks() {
 
 // --- player lifecycle ---
 
-function createPlayer(ws, id, userId = null, name = null, savedData = null) {
-  const color    = PLAYER_COLORS[(id - 1) % PLAYER_COLORS.length];
+function createPlayer(ws, id, userId = null, name = null, savedData = null, preferredColor = null) {
+  const color = (preferredColor && /^#[0-9a-fA-F]{6}$/.test(preferredColor))
+    ? preferredColor
+    : PLAYER_COLORS[(id - 1) % PLAYER_COLORS.length];
   const shipType = 'basic';
   const base     = SHIP_TYPES[shipType];
 
-  const gemCount   = savedData ? savedData.gold           : 99999;
-  const xpCount    = savedData ? savedData.xp_count       : 99999;
+  const gemCount   = savedData ? savedData.gold           : 0;
+  const xpCount    = savedData ? savedData.xp_count       : 0;
   const totalXp    = savedData ? savedData.total_xp       : 0;
   const level      = savedData ? savedData.level          : 1;
   const upPoints   = savedData ? savedData.upgrade_points : 0;
@@ -440,8 +442,9 @@ wss.on('connection', (ws, req) => {
     ? db.prepare('SELECT * FROM player_data WHERE user_id = ?').get(userId)
     : null;
 
+  const colorParam = url.searchParams.get('color');
   const id = nextId++;
-  const player = createPlayer(ws, id, userId, username, savedData);
+  const player = createPlayer(ws, id, userId, username, savedData, colorParam);
   players.set(id, player);
 
   send(ws, {

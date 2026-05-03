@@ -164,8 +164,10 @@ function connectToGame(nickname) {
 
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
   const token    = localStorage.getItem('starship_token') || '';
-  const query    = token ? `?token=${encodeURIComponent(token)}` : '';
-  ws = new WebSocket(`${protocol}//${location.host}/ws${query}`);
+  const params   = new URLSearchParams();
+  if (token) params.set('token', token);
+  params.set('color', selectedColor);
+  ws = new WebSocket(`${protocol}//${location.host}/ws?${params.toString()}`);
 
   ws.onopen  = () => { connected = true; };
   ws.onclose = () => { connected = false; };
@@ -332,6 +334,43 @@ function sendInput() {
   pendingShoot = false;
 }
 
+// --- Client-side collision prediction (mirrors server checkPlayerRockCollisions, no damage) ---
+
+function checkLocalPlayerRockCollisions() {
+  for (const rock of serverRocks) {
+    const cdx = torusDelta(localPlayer.x, rock.x, WORLD_W);
+    const cdy = torusDelta(localPlayer.y, rock.y, WORLD_H);
+    const dist = Math.hypot(cdx, cdy);
+    const minDist = PLAYER_R + rock.r;
+
+    if (dist < minDist && dist > 0) {
+      const overlap = minDist - dist;
+      const nx = cdx / dist;
+      const ny = cdy / dist;
+
+      const mP = PLAYER_R * PLAYER_R;
+      const mR = rock.r * rock.r;
+      const invSum = 1 / (mP + mR);
+
+      localPlayer.x = ((localPlayer.x + nx * overlap * (mR * invSum)) % WORLD_W + WORLD_W) % WORLD_W;
+      localPlayer.y = ((localPlayer.y + ny * overlap * (mR * invSum)) % WORLD_H + WORLD_H) % WORLD_H;
+
+      const rvx = localPlayer.vx - (rock.vx || 0);
+      const rvy = localPlayer.vy - (rock.vy || 0);
+      const relN = rvx * nx + rvy * ny;
+
+      if (relN < 0) {
+        const j = -(1 + 0.15) * relN / (1 / mP + 1 / mR);
+        localPlayer.vx += (j / mP) * nx;
+        localPlayer.vy += (j / mP) * ny;
+        const punchMult = 1 + (localPlayer.upgrades.collisionShield || 0) * 0.20;
+        rock.vx = (rock.vx || 0) - (j * punchMult * 3.0 / mR) * nx;
+        rock.vy = (rock.vy || 0) - (j * punchMult * 3.0 / mR) * ny;
+      }
+    }
+  }
+}
+
 // --- Client-side prediction ---
 
 function update(dt) {
@@ -434,6 +473,8 @@ function update(dt) {
     r.vx *= Math.exp(-1.8 * dt);
     r.vy *= Math.exp(-1.8 * dt);
   }
+
+  checkLocalPlayerRockCollisions();
 
   for (const s of stars) {
     s.x = (s.x + s.vx * dt + canvas.width)  % canvas.width;
@@ -665,6 +706,14 @@ function drawBullets(camX, camY) {
   }
 }
 
+function drawNickname(centerX, aboveY, name) {
+  ctx.font = '12px Ticketing';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.fillText(name, centerX, aboveY - 2);
+}
+
 function drawRemotePlayers(camX, camY) {
   for (const [, p] of remotePlayers) {
     if (p.dead) continue;
@@ -680,7 +729,9 @@ function drawRemotePlayers(camX, camY) {
     if (sx < -margin || sx > canvas.width + margin || sy < -margin || sy > canvas.height + margin) continue;
 
     drawShip(sx, sy, p.angle, p.color, PLAYER_R);
-    drawHealthBar(sx, sy - PLAYER_R - 12, PLAYER_R, p.hp, p.maxHp);
+    const hpTopY = sy - PLAYER_R - 12;
+    drawNickname(sx, hpTopY, p.name || 'Player');
+    drawHealthBar(sx, hpTopY, PLAYER_R, p.hp, p.maxHp);
     drawXpBar(sx, sy + PLAYER_R + 6, PLAYER_R, p.totalXpEarned ?? 0);
   }
 }
@@ -990,10 +1041,10 @@ function drawHUD() {
 
   ctx.textAlign = "right";
   ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.fillText(
-    `X: ${Math.floor(localPlayer.x)}  Y: ${Math.floor(localPlayer.y)}`,
-    canvas.width - pad, pad
-  );
+  ctx.fillText(`X: ${Math.floor(localPlayer.x)}  Y: ${Math.floor(localPlayer.y)}`, canvas.width - pad, pad);
+  ctx.font = "14px Ticketing";
+  ctx.fillStyle = fps >= 55 ? "rgba(74,222,128,0.8)" : fps >= 30 ? "rgba(250,204,21,0.8)" : "rgba(239,68,68,0.8)";
+  ctx.fillText(`${fps} fps`, canvas.width - pad, pad + 28);
   ctx.textAlign = "left";
 }
 
@@ -1058,9 +1109,12 @@ function draw() {
   drawRemotePlayers(camX, camY);
 
   if (!localPlayer.dead) {
-    drawShip(canvas.width / 2, canvas.height / 2, localPlayer.angle, localPlayer.color, PLAYER_R);
-    drawHealthBar(canvas.width / 2, canvas.height / 2 - PLAYER_R - 12, PLAYER_R, localPlayer.hp, localPlayer.maxHp);
-    drawXpBar(canvas.width / 2, canvas.height / 2 + PLAYER_R + 6, PLAYER_R, localPlayer.totalXpEarned);
+    const cx = canvas.width / 2, cy = canvas.height / 2;
+    drawShip(cx, cy, localPlayer.angle, localPlayer.color, PLAYER_R);
+    const hpTopY = cy - PLAYER_R - 12;
+    drawNickname(cx, hpTopY, localPlayer.nickname || 'Player');
+    drawHealthBar(cx, hpTopY, PLAYER_R, localPlayer.hp, localPlayer.maxHp);
+    drawXpBar(cx, cy + PLAYER_R + 6, PLAYER_R, localPlayer.totalXpEarned);
   }
 
   drawHUD();
@@ -1071,9 +1125,13 @@ function draw() {
 }
 
 let last = performance.now();
+let fpsFrames = 0, fpsTime = 0, fps = 0;
 function loop(now) {
   const dt = Math.min((now - last) / 1000, 0.1);
   last = now;
+  fpsFrames++;
+  fpsTime += dt;
+  if (fpsTime >= 0.5) { fps = Math.round(fpsFrames / fpsTime); fpsFrames = 0; fpsTime = 0; }
   update(dt);
   draw();
   requestAnimationFrame(loop);
