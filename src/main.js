@@ -133,18 +133,35 @@ function getLevelInfo(totalXp) {
 }
 
 const UPGRADE_DEFS_CLIENT = [
-  { id: 'healthCap',       label: 'Health Capacity',  color: '#ef4444' },
-  { id: 'healthRegen',     label: 'Health Regen',     color: '#f472b6' },
-  { id: 'bulletReload',    label: 'Bullet Reload',    color: '#fbbf24' },
-  { id: 'bulletSpeed',     label: 'Bullet Speed',     color: '#fb923c' },
-  { id: 'bulletDamage',    label: 'Bullet Damage',    color: '#f97316' },
-  { id: 'shipSpeed',       label: 'Ship Speed',       color: '#22d3ee' },
-  { id: 'shipAgility',     label: 'Ship Agility',     color: '#60a5fa' },
-  { id: 'bodyDamage',      label: 'Body Damage',      color: '#c084fc' },
-  { id: 'collisionShield', label: 'Collision Shield', color: '#818cf8' },
+  { id: 'healthCap',       label: 'Health Capacity',  color: '#ef4444', texture: '/textures/interface/upgrades/healthupgrade1.svg' },
+  { id: 'healthRegen',     label: 'Health Regen',     color: '#f472b6', texture: '/textures/interface/upgrades/hpregenupgrade2.svg' },
+  { id: 'bulletReload',    label: 'Bullet Reload',    color: '#fbbf24', texture: '/textures/interface/upgrades/blreloadupgrade3.svg' },
+  { id: 'bulletSpeed',     label: 'Bullet Speed',     color: '#fb923c', texture: '/textures/interface/upgrades/blspeedupgrade4.svg' },
+  { id: 'bulletDamage',    label: 'Bullet Damage',    color: '#f97316', texture: '/textures/interface/upgrades/bldamageupgrade5.svg' },
+  { id: 'shipSpeed',       label: 'Ship Speed',       color: '#22d3ee', texture: '/textures/interface/upgrades/shipspeedupgrade6.svg' },
+  { id: 'shipAgility',     label: 'Ship Agility',     color: '#60a5fa', texture: '/textures/interface/upgrades/agilityupgrade7.svg' },
+  { id: 'bodyDamage',      label: 'Body Damage',      color: '#c084fc', texture: '/textures/interface/upgrades/bodydamageupgrade8.svg' },
+  { id: 'collisionShield', label: 'Collision Shield', color: '#818cf8', texture: '/textures/interface/upgrades/bodyshieldupgrade9.svg' },
 ];
 const MAX_UPGRADE_LEVEL = 6;
 const UPGRADE_XP_PER_LEVEL = 50;
+
+const upgradeImgs = {};
+for (const def of UPGRADE_DEFS_CLIENT) {
+  const img = new Image();
+  img._loaded = false;
+  img.onload = () => { img._loaded = true; };
+  img.src = def.texture;
+  upgradeImgs[def.id] = img;
+}
+const emptyUpgradeImg = new Image();
+emptyUpgradeImg._loaded = false;
+emptyUpgradeImg.onload = () => { emptyUpgradeImg._loaded = true; };
+emptyUpgradeImg.src = '/textures/interface/upgrades/emptyupgrade.svg';
+const fullUpgradeImg = new Image();
+fullUpgradeImg._loaded = false;
+fullUpgradeImg.onload = () => { fullUpgradeImg._loaded = true; };
+fullUpgradeImg.src = '/textures/interface/upgrades/fullupgrade.svg';
 
 function torusDelta(a, b, size) {
   let d = a - b;
@@ -208,10 +225,12 @@ let serverBullets = [];
 // --- Input ---
 
 const keys = new Set();
+const upgradeFlashTime = new Array(UPGRADE_DEFS_CLIENT.length).fill(-1);
 window.addEventListener("keydown", e => {
   const upgradeIdx = parseInt(e.key) - 1;
   if (upgradeIdx >= 0 && upgradeIdx < UPGRADE_DEFS_CLIENT.length) {
     sendUpgrade(UPGRADE_DEFS_CLIENT[upgradeIdx].id);
+    upgradeFlashTime[upgradeIdx] = performance.now();
   }
   keys.add(e.key.toLowerCase());
   if (e.key === ' ') e.preventDefault();
@@ -858,58 +877,16 @@ function roundRect(cx, x, y, w, h, r) {
   cx.closePath();
 }
 
-function drawUpgrade1Content(bx, by, level) {
-  ctx.fillStyle = '#D9D9D9';
-
-  // Top-left heart
-  ctx.beginPath();
-  ctx.moveTo(bx+18,by+32); ctx.lineTo(bx+21,by+28); ctx.lineTo(bx+25,by+28);
-  ctx.lineTo(bx+28,by+33); ctx.lineTo(bx+31,by+28); ctx.lineTo(bx+35,by+28);
-  ctx.lineTo(bx+38,by+32); ctx.lineTo(bx+38,by+38); ctx.lineTo(bx+30,by+46);
-  ctx.lineTo(bx+26,by+46); ctx.lineTo(bx+18,by+38); ctx.closePath();
-  ctx.fill();
-
-  // Top-right heart
-  ctx.beginPath();
-  ctx.moveTo(bx+42,by+32); ctx.lineTo(bx+45,by+28); ctx.lineTo(bx+49,by+28);
-  ctx.lineTo(bx+52,by+33); ctx.lineTo(bx+55,by+28); ctx.lineTo(bx+59,by+28);
-  ctx.lineTo(bx+62,by+32); ctx.lineTo(bx+62,by+38); ctx.lineTo(bx+54,by+46);
-  ctx.lineTo(bx+50,by+46); ctx.lineTo(bx+42,by+38); ctx.closePath();
-  ctx.fill();
-
-  // Bottom-center heart
-  ctx.beginPath();
-  ctx.moveTo(bx+30,by+50); ctx.lineTo(bx+33,by+46); ctx.lineTo(bx+37,by+46);
-  ctx.lineTo(bx+40,by+51); ctx.lineTo(bx+43,by+46); ctx.lineTo(bx+47,by+46);
-  ctx.lineTo(bx+50,by+50); ctx.lineTo(bx+50,by+56); ctx.lineTo(bx+42,by+64);
-  ctx.lineTo(bx+38,by+64); ctx.lineTo(bx+30,by+56); ctx.closePath();
-  ctx.fill();
-
-  // 6 progress bars
-  const barXs = [17, 25, 33, 41, 49, 57];
-  for (let b = 0; b < 6; b++) {
-    roundRect(ctx, bx + barXs[b], by + 67, 6, 16, 3);
-    if (b < level) {
-      ctx.fillStyle = '#D9D9D9';
-      ctx.fill();
-    } else {
-      ctx.strokeStyle = 'rgba(217,217,217,0.35)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
-  }
-}
+const UPGRADE_BAR_XS = [17, 25, 33, 41, 49, 57];
 
 function drawUpgradeBar() {
   if (!myId || localPlayer.dead) return;
 
   const upgrades = localPlayer.upgrades;
-  const xp = localPlayer.xpCount;
-
-  const SLOTS  = 10;
-  const btnW   = 80;
-  const btnH   = 112;
-  const gap    = 16;
+  const btnW  = 80;
+  const btnH  = 112;
+  const gap   = 16;
+  const SLOTS = UPGRADE_DEFS_CLIENT.length;
   const totalW = SLOTS * btnW + (SLOTS - 1) * gap;
   const minimapX = canvas.width - CORNER_PAD - MINIMAP_SIZE;
   const startX = minimapX - 32 - totalW;
@@ -922,95 +899,83 @@ function drawUpgradeBar() {
     const bx = startX + i * (btnW + gap);
     const by = startY;
 
-    const level      = def ? ((upgrades && upgrades[def.id]) || 0) : 0;
-    const maxed      = def && level >= MAX_UPGRADE_LEVEL;
-    const goldCost   = def && !maxed ? upgradeGoldCost(level) : null;
-    const hasPoint   = localPlayer.upgradePoints >= 1;
-    const canAfford  = goldCost !== null && hasPoint && localPlayer.gemCount >= goldCost;
-    const hovered = mouseX >= bx && mouseX <= bx + btnW && mouseY >= by && mouseY <= by + btnH;
+    const level     = (upgrades && upgrades[def.id]) || 0;
+    const maxed     = level >= MAX_UPGRADE_LEVEL;
+    const hasPoint  = localPlayer.upgradePoints >= 1;
+    const canAfford = !maxed && hasPoint;
+    const hovered   = mouseX >= bx && mouseX <= bx + btnW && mouseY >= by && mouseY <= by + btnH;
 
-    // Background
-    ctx.fillStyle = def ? 'rgba(0,0,0,0.78)' : 'rgba(0,0,0,0.35)';
-    roundRect(ctx, bx, by, btnW, btnH, 10);
-    ctx.fill();
+    // Base texture
+    const img = upgradeImgs[def.id];
+    if (img && img._loaded) {
+      ctx.drawImage(img, bx, by, btnW, btnH);
+    } else {
+      ctx.fillStyle = 'rgba(0,0,0,0.85)';
+      roundRect(ctx, bx, by, btnW, btnH, 14);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      ctx.lineWidth = 2;
+      roundRect(ctx, bx, by, btnW, btnH, 14);
+      ctx.stroke();
+    }
 
-    if (hovered && def) {
+    // Erase baked static dots from SVG artwork
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(bx + 14, by + 66, 52, 11);
+
+    // Progress bar pills
+    for (let d = 0; d < MAX_UPGRADE_LEVEL; d++) {
+      const barImg = d < level ? fullUpgradeImg : emptyUpgradeImg;
+      if (barImg._loaded) {
+        ctx.drawImage(barImg, bx + UPGRADE_BAR_XS[d], by + 67, 6, 16);
+      } else {
+        roundRect(ctx, bx + UPGRADE_BAR_XS[d], by + 67, 6, 16, 3);
+        if (d < level) { ctx.fillStyle = '#D9D9D9'; ctx.fill(); }
+        else { ctx.strokeStyle = 'rgba(217,217,217,0.35)'; ctx.lineWidth = 1; ctx.stroke(); }
+      }
+    }
+
+    // Hover highlight
+    if (hovered) {
       ctx.fillStyle = 'rgba(255,255,255,0.07)';
-      roundRect(ctx, bx, by, btnW, btnH, 10);
+      roundRect(ctx, bx + 2, by + 2, 76, 108, 12);
       ctx.fill();
     }
 
-    // Border
-    ctx.strokeStyle = maxed      ? 'rgba(255,215,0,0.75)'   :
-                      canAfford  ? 'rgba(255,255,255,0.85)'  :
-                      def        ? 'rgba(255,255,255,0.35)'  :
-                                   'rgba(255,255,255,0.12)';
-    ctx.lineWidth = 2;
-    roundRect(ctx, bx, by, btnW, btnH, 10);
-    ctx.stroke();
+    // State border overlay
+    if (maxed) {
+      ctx.strokeStyle = 'rgba(255,215,0,0.85)';
+      ctx.lineWidth = 3;
+      roundRect(ctx, bx + 2, by + 2, 76, 108, 12);
+      ctx.stroke();
+    } else if (canAfford) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.lineWidth = 2;
+      roundRect(ctx, bx + 2, by + 2, 76, 108, 12);
+      ctx.stroke();
+    }
 
-    if (!def) continue;
+    // Keypress flash
+    const flashAlpha = Math.max(0, 0.45 - (performance.now() - upgradeFlashTime[i]) / 250 * 0.45);
+    if (flashAlpha > 0) {
+      ctx.fillStyle = `rgba(255,255,255,${flashAlpha.toFixed(2)})`;
+      roundRect(ctx, bx + 2, by + 2, 76, 108, 12);
+      ctx.fill();
+    }
 
-    if (i === 0) {
-      drawUpgrade1Content(bx, by, level);
+    // Status label at bottom
+    ctx.font = '10px Ticketing';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (maxed) {
+      ctx.fillStyle = 'rgba(255,215,0,0.85)';
+      ctx.fillText('MAX', bx + btnW / 2, by + 101);
+    } else if (!hasPoint) {
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.fillText('no pts', bx + btnW / 2, by + 101);
     } else {
-      // Color strip at top
-      ctx.fillStyle = def.color;
-      ctx.fillRect(bx + 12, by + 8, btnW - 24, 4);
-
-      // Key number
-      ctx.font = 'bold 10px Ticketing';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      ctx.fillText(`${i + 1}`, bx + 6, by + 6);
-
-      // Label — two lines
-      const words = def.label.split(' ');
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.font = '11px Ticketing';
-      ctx.fillStyle = maxed ? 'rgba(255,215,0,0.9)' : 'rgba(255,255,255,0.88)';
-      if (words.length >= 2) {
-        ctx.fillText(words[0],               bx + btnW / 2, by + 36);
-        ctx.fillText(words.slice(1).join(' '), bx + btnW / 2, by + 50);
-      } else {
-        ctx.fillText(def.label, bx + btnW / 2, by + 43);
-      }
-
-      // Level dots
-      const dotR = 3.5;
-      const dotSpacing = 10;
-      const dotsW = (MAX_UPGRADE_LEVEL - 1) * dotSpacing;
-      const dotsStartX = bx + btnW / 2 - dotsW / 2;
-      const dotsY = by + 72;
-      for (let d = 0; d < MAX_UPGRADE_LEVEL; d++) {
-        ctx.beginPath();
-        ctx.arc(dotsStartX + d * dotSpacing, dotsY, dotR, 0, Math.PI * 2);
-        if (d < level) {
-          ctx.fillStyle = def.color;
-          ctx.fill();
-        } else {
-          ctx.strokeStyle = 'rgba(255,255,255,0.22)';
-          ctx.lineWidth = 1;
-          ctx.stroke();
-        }
-      }
-
-      // Cost / MAX
-      ctx.font = '11px Ticketing';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      if (maxed) {
-        ctx.fillStyle = 'rgba(255,215,0,0.8)';
-        ctx.fillText('MAX', bx + btnW / 2, by + 93);
-      } else if (!hasPoint) {
-        ctx.fillStyle = 'rgba(255,255,255,0.25)';
-        ctx.fillText('no points', bx + btnW / 2, by + 93);
-      } else {
-        ctx.fillStyle = canAfford ? '#facc15' : 'rgba(255,255,255,0.32)';
-        ctx.fillText(`${goldCost} gold`, bx + btnW / 2, by + 93);
-      }
+      ctx.fillStyle = '#4ade80';
+      ctx.fillText('upgrade!', bx + btnW / 2, by + 101);
     }
 
     upgradeHitBoxes.push({ x: bx, y: by, w: btnW, h: btnH, id: def.id });

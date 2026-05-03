@@ -1,0 +1,49 @@
+<svg width="80" height="112" viewBox="0 0 80 112" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_82_83)">
+<rect x="2" y="2" width="76" height="108" rx="14" fill="black" stroke="white" stroke-width="4"/>
+<g clip-path="url(#clip1_82_83)">
+<rect x="49.5" y="69.5" width="5" height="5" rx="2.5" stroke="white"/>
+</g>
+<g clip-path="url(#clip2_82_83)">
+<rect x="57.5" y="69.5" width="5" height="5" rx="2.5" stroke="white"/>
+</g>
+<path d="M16 30.5556L23.2 21H32.8L40 32.9444L47.2 21H56.8L64 30.5556V44.8889L44.8 64H35.2L16 44.8889V30.5556Z" fill="white"/>
+<g clip-path="url(#clip3_82_83)">
+<rect x="17" y="69" width="6" height="6" rx="3" fill="white"/>
+</g>
+<g clip-path="url(#clip4_82_83)">
+<rect x="25" y="69" width="6" height="6" rx="3" fill="white"/>
+</g>
+<g clip-path="url(#clip5_82_83)">
+<rect x="33" y="69" width="6" height="6" rx="3" fill="white"/>
+</g>
+<g clip-path="url(#clip6_82_83)">
+<rect x="41" y="69" width="6" height="6" rx="3" fill="white"/>
+</g>
+<path d="M16.46 14.74V16H11V14.74H13.1V8.02H11.84V6.76H14.36V14.74H16.46Z" fill="white"/>
+<path d="M30.29 87.71V92H29.3V88.04H28.97V87.71H27.65V88.04H27.32V88.37H26.99V92H26V84.74H26.99V87.38H27.32V87.05H27.65V86.72H29.3V87.05H29.63V87.38H29.96V87.71H30.29ZM31.9421 89.03H34.2521V88.04H33.9221V87.71H32.2721V88.04H31.9421V89.03ZM35.2421 87.71V89.36H34.9121V89.69H34.5821V90.02H31.9421V90.68H32.2721V91.01H34.9121V92H31.9421V91.67H31.6121V91.34H31.2821V91.01H30.9521V87.71H31.2821V87.38H31.6121V87.05H31.9421V86.72H34.2521V87.05H34.5821V87.38H34.9121V87.71H35.2421ZM38.8743 90.35H39.2043V88.37H38.8743V88.04H38.5443V87.71H37.2243V88.04H36.8943V90.68H37.2243V91.01H38.5443V90.68H38.8743V90.35ZM40.1943 86.72V92H39.2043V91.34H38.8743V91.67H38.5443V92H36.8943V91.67H36.5643V91.34H36.2343V91.01H35.9043V87.71H36.2343V87.38H36.5643V87.05H36.8943V86.72H38.5443V87.05H38.8743V87.38H39.2043V86.72H40.1943ZM45.1464 91.01V92H42.8364V91.67H42.5064V91.34H42.1764V91.01H41.8464V85.73H40.8564V84.74H42.8364V90.68H43.1664V91.01H45.1464ZM50.0986 90.35V91.01H49.7686V91.34H49.4386V91.67H49.1086V92H47.1286V91.67H46.7986V91.34H46.4686V91.01H46.1386V90.68H45.8086V86.06H46.7986V87.38H49.7686V88.37H46.7986V90.35H47.1286V90.68H47.4586V91.01H48.7786V90.68H49.1086V90.35H50.0986ZM55.0507 87.71V92H54.0607V88.04H53.7307V87.71H52.4107V88.04H52.0807V88.37H51.7507V92H50.7607V84.74H51.7507V87.38H52.0807V87.05H52.4107V86.72H54.0607V87.05H54.3907V87.38H54.7207V87.71H55.0507Z" fill="white"/>
+</g>
+<defs>
+<clipPath id="clip0_82_83">
+<rect width="80" height="112" fill="white"/>
+</clipPath>
+<clipPath id="clip1_82_83">
+<rect width="6" height="6" fill="white" transform="translate(49 69)"/>
+</clipPath>
+<clipPath id="clip2_82_83">
+<rect width="6" height="6" fill="white" transform="translate(57 69)"/>
+</clipPath>
+<clipPath id="clip3_82_83">
+<rect width="6" height="6" fill="white" transform="translate(17 69)"/>
+</clipPath>
+<clipPath id="clip4_82_83">
+<rect width="6" height="6" fill="white" transform="translate(25 69)"/>
+</clipPath>
+<clipPath id="clip5_82_83">
+<rect width="6" height="6" fill="white" transform="translate(33 69)"/>
+</clipPath>
+<clipPath id="clip6_82_83">
+<rect width="6" height="6" fill="white" transform="translate(41 69)"/>
+</clipPath>
+</defs>
+</svg>

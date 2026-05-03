@@ -470,11 +470,8 @@ wss.on('connection', (ws, req) => {
         if (!UPGRADE_IDS.includes(stat)) return;
         const currentLevel = player.upgrades[stat];
         if (currentLevel >= MAX_UPGRADE_LEVEL) return;
-        const goldCost = upgradeGoldCost(currentLevel);
         if (player.upgradePoints < 1) return;
-        if (player.gemCount < goldCost) return;
         player.upgradePoints--;
-        player.gemCount -= goldCost;
         player.upgrades[stat] = currentLevel + 1;
         const newStats = computeStats(player);
         player.maxHp = newStats.maxHp;
