@@ -115,10 +115,6 @@ function getLevel(totalXp) {
   return MAX_LEVEL;
 }
 
-function upgradeGoldCost(currentLevel) {
-  return Math.floor(50 * Math.pow(1.5, currentLevel));
-}
-
 // --- Network optimisation constants ---
 const VIEW_RANGE = 1600; // world units sent to each client
 const NET_RATE   = 2;    // send every Nth physics tick → 30 Hz
@@ -240,32 +236,39 @@ function serializeRock(rock) {
   };
 }
 
-function spawnGemsAt(x, y, r) {
-  const mult = Math.max(2, Math.round(r / PLAYER_R));
-  const count = Math.max(2, mult * 2);
-  for (let i = 0; i < count; i++) {
+function spawnCoinsAt(x, y, totalGold) {
+  const bigCount = Math.floor(totalGold / 5);
+  let remaining = totalGold - bigCount * 5;
+  const medCount = Math.floor(remaining / 2);
+  const smallCount = remaining - medCount * 2;
+
+  function pushCoin(coinType, value) {
     const angle = Math.random() * Math.PI * 2;
     const speed = rand(40, 140);
-    gems.push({
-      id: nextGemId++, x, y, r: GEM_RADIUS,
+    gems.push({ id: nextGemId++, x, y, r: GEM_RADIUS,
       vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
-      life: GEM_DESPAWN, value: 1,
-    });
+      life: GEM_DESPAWN, value, coinType });
   }
+  for (let i = 0; i < bigCount;   i++) pushCoin('big',    5);
+  for (let i = 0; i < medCount;   i++) pushCoin('medium', 2);
+  for (let i = 0; i < smallCount; i++) pushCoin('small',  1);
 }
 
 function spawnXpAt(x, y, amount) {
-  const count = Math.max(1, Math.round(amount / 2));
-  const perDrop = Math.max(1, Math.floor(amount / count));
-  for (let i = 0; i < count; i++) {
+  const bigCount   = Math.floor(amount / 3);
+  const smallCount = amount - bigCount * 3;
+
+  function pushXp(xpType, value) {
     const angle = Math.random() * Math.PI * 2;
     const speed = rand(30, 100);
     xpDrops.push({
       id: nextXpId++, x, y, r: XP_RADIUS,
       vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
-      life: XP_DESPAWN, value: perDrop,
+      life: XP_DESPAWN, value, xpType, xpVariant: Math.floor(Math.random() * 3) + 1,
     });
   }
+  for (let i = 0; i < bigCount;   i++) pushXp('big',   3);
+  for (let i = 0; i < smallCount; i++) pushXp('small', 1);
 }
 
 function initRocks() {
@@ -342,16 +345,8 @@ function killPlayer(p) {
   p.hp = 0;
   p.respawnTimer = RESPAWN_TIME;
   const drop = Math.min(10, Math.floor(p.gemCount / 2));
-  for (let i = 0; i < drop; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = rand(40, 120);
-    gems.push({
-      id: nextGemId++, x: p.x, y: p.y, r: GEM_RADIUS,
-      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
-      life: GEM_DESPAWN, value: 1,
-    });
-  }
   p.gemCount = Math.floor(p.gemCount / 2);
+  if (drop > 0) spawnCoinsAt(p.x, p.y, drop);
   const xpDrop = Math.floor(p.xpCount / 2);
   if (xpDrop > 0) spawnXpAt(p.x, p.y, xpDrop);
   p.xpCount = Math.floor(p.xpCount / 2);
@@ -452,8 +447,8 @@ wss.on('connection', (ws, req) => {
     id, color: player.color, x: player.x, y: player.y,
     name: player.name,
     rocks: rocks.map(serializeRock),
-    gems: gems.map(g => ({ id: g.id, x: g.x, y: g.y, r: g.r })),
-    xpDrops: xpDrops.map(x => ({ id: x.id, x: x.x, y: x.y, r: x.r })),
+    gems: gems.map(g => ({ id: g.id, x: g.x, y: g.y, r: g.r, coinType: g.coinType })),
+    xpDrops: xpDrops.map(x => ({ id: x.id, x: x.x, y: x.y, r: x.r, xpType: x.xpType, xpVariant: x.xpVariant })),
     players: Array.from(players.values()).map(serialize),
     upgradeIds: UPGRADE_IDS,
     xpPerLevel: UPGRADE_XP_PER_LEVEL,
@@ -463,8 +458,12 @@ wss.on('connection', (ws, req) => {
   ws.on('message', (raw) => {
     try {
       const msg = JSON.parse(raw);
-      if (msg.type === 'input') {
+      if (msg.type === 'ping') {
+        ws.send(JSON.stringify({ type: 'pong', t: msg.t }));
+      } else if (msg.type === 'input') {
         player.input = msg;
+      } else if (msg.type === 'cheat') {
+        if (msg.code === 'hesoyam') player.upgradePoints += 10;
       } else if (msg.type === 'upgrade') {
         const stat = msg.stat;
         if (!UPGRADE_IDS.includes(stat)) return;
@@ -619,7 +618,7 @@ function updateBullets() {
         rock.hp -= b.damage;
         hit = true;
         if (rock.hp <= 0) {
-          spawnGemsAt(rock.x, rock.y, rock.r);
+          spawnCoinsAt(rock.x, rock.y, Math.max(2, Math.round(rock.r / PLAYER_R)) * 2);
           spawnXpAt(rock.x, rock.y, Math.max(1, Math.round(rock.r / PLAYER_R)));
           rocks.splice(r, 1);
           rocks.push(spawnRock());
@@ -766,7 +765,7 @@ function checkPlayerRockCollisions() {
 
           if (p.hp <= 0) killPlayer(p);
           if (rock.hp <= 0) {
-            spawnGemsAt(rock.x, rock.y, rock.r);
+            spawnCoinsAt(rock.x, rock.y, Math.max(2, Math.round(rock.r / PLAYER_R)) * 2);
             spawnXpAt(rock.x, rock.y, Math.max(1, Math.round(rock.r / PLAYER_R)));
             rocks.splice(i, 1);
             rocks.push(spawnRock());
@@ -811,10 +810,10 @@ function tick() {
         .map(serializeRock);
       msg.gems = gems
         .filter(g => torusDist(p.x, p.y, g.x, g.y) < VIEW_RANGE)
-        .map(g => ({ id: g.id, x: g.x, y: g.y, r: g.r, vx: g.vx, vy: g.vy }));
+        .map(g => ({ id: g.id, x: g.x, y: g.y, r: g.r, vx: g.vx, vy: g.vy, coinType: g.coinType }));
       msg.xpDrops = xpDrops
         .filter(x => torusDist(p.x, p.y, x.x, x.y) < VIEW_RANGE)
-        .map(x => ({ id: x.id, x: x.x, y: x.y, r: x.r, vx: x.vx, vy: x.vy }));
+        .map(x => ({ id: x.id, x: x.x, y: x.y, r: x.r, vx: x.vx, vy: x.vy, xpType: x.xpType, xpVariant: x.xpVariant }));
     }
 
     send(p.ws, msg);

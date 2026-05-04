@@ -19,18 +19,26 @@ let bulletImgReady = false;
 bulletImg.onload = () => { bulletImgReady = true; };
 bulletImg.src = '/textures/ships/basic_ship/basicship_bullet.svg';
 
-const goldImg = new Image();
-goldImg._loaded = false;
-goldImg.onload = () => { goldImg._loaded = true; };
-goldImg.src = '/textures/particles/gold/gold1.svg';
+const coinImgs = { small: new Image(), medium: new Image(), big: new Image() };
+const COIN_SIZES = { small: 12, medium: 18, big: 26 };
+for (const [key, img] of Object.entries(coinImgs)) {
+  img._loaded = false;
+  img.onload = () => { img._loaded = true; };
+  img.src = `/textures/particles/gold/${key}coin.svg`;
+}
 
-const xpImgs = Array.from({ length: 10 }, (_, i) => {
+function makeXpImg(src) {
   const img = new Image();
   img._loaded = false;
   img.onload = () => { img._loaded = true; };
-  img.src = `/textures/particles/xp/xp${i + 1}.svg`;
+  img.src = src;
   return img;
-});
+}
+const xpImgs = {
+  big:   [1, 2, 3].map(n => makeXpImg(`/textures/particles/xp/bigxp/bigxp${n}.svg`)),
+  small: [1, 2, 3].map(n => makeXpImg(`/textures/particles/xp/smallxp/smallxp${n}.svg`)),
+};
+const XP_SIZES = { big: 24, small: 16 };
 
 const rockImgCache = new Map(); // path → HTMLImageElement
 
@@ -61,24 +69,80 @@ function syncRockAppearance(rocks) {
   }
 }
 
-const STAR_COUNT = 220;
-const stars = [];
+const PARALLAX_TILE = 2048;
+const starLayers = [];
+
+function makeStarLayer(count, minR, maxR, minAlpha, maxAlpha) {
+  return Array.from({ length: count }, () => ({
+    x: Math.random() * PARALLAX_TILE,
+    y: Math.random() * PARALLAX_TILE,
+    r: minR + Math.random() * (maxR - minR),
+    alpha: minAlpha + Math.random() * (maxAlpha - minAlpha),
+    phase: Math.random() * Math.PI * 2,
+    phaseSpeed: Math.random() * 0.4 + 0.1,
+  }));
+}
 
 function initStars() {
-  stars.length = 0;
-  for (let i = 0; i < STAR_COUNT; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = Math.random() * 12 + 3;
-    stars.push({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      r: Math.pow(Math.random(), 2) * 1.8 + 0.3,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      base: Math.random() * 0.4 + 0.2,
-      phase: Math.random() * Math.PI * 2,
-      phaseSpeed: Math.random() * 1.5 + 0.3,
-    });
+  starLayers.length = 0;
+  starLayers.push({ parallax: 0.04, stars: makeStarLayer(180, 0.2, 0.7, 0.12, 0.35) }); // far
+  starLayers.push({ parallax: 0.18, stars: makeStarLayer(90,  0.6, 1.3, 0.28, 0.60) }); // mid
+  starLayers.push({ parallax: 0.45, stars: makeStarLayer(40,  1.1, 2.2, 0.55, 1.00) }); // near
+}
+
+// --- Shooting stars ---
+const shootingStars = [];
+const SHOOTING_STAR_RATE = 0.15; // avg spawns per second
+const SHOOTING_STAR_PARALLAX = 0.04; // same depth as far star layer
+
+function spawnShootingStar() {
+  const ox = ((localPlayer.x * SHOOTING_STAR_PARALLAX) % PARALLAX_TILE + PARALLAX_TILE) % PARALLAX_TILE;
+  const oy = ((localPlayer.y * SHOOTING_STAR_PARALLAX) % PARALLAX_TILE + PARALLAX_TILE) % PARALLAX_TILE;
+  const angle = (Math.random() * 30 + 15) * Math.PI / 180; // 15–45° downward
+  const speed = Math.random() * 400 + 350;
+  shootingStars.push({
+    x: Math.random() * canvas.width * 1.2 - canvas.width * 0.1 + ox,
+    y: Math.random() * canvas.height * 0.5 + oy,
+    vx: Math.cos(angle) * speed,
+    vy: Math.sin(angle) * speed,
+    len: Math.random() * 90 + 60,
+    alpha: Math.random() * 0.3 + 0.7,
+    life: 1,
+  });
+}
+
+function updateShootingStars(dt) {
+  if (Math.random() < SHOOTING_STAR_RATE * dt) spawnShootingStar();
+  for (let i = shootingStars.length - 1; i >= 0; i--) {
+    const s = shootingStars[i];
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
+    s.life -= dt * (0.9 + Math.random() * 0.4);
+    if (s.life <= 0) { shootingStars.splice(i, 1); continue; }
+  }
+}
+
+function drawShootingStars(camX, camY) {
+  const ox = ((camX * SHOOTING_STAR_PARALLAX) % PARALLAX_TILE + PARALLAX_TILE) % PARALLAX_TILE;
+  const oy = ((camY * SHOOTING_STAR_PARALLAX) % PARALLAX_TILE + PARALLAX_TILE) % PARALLAX_TILE;
+  for (const s of shootingStars) {
+    const sx = s.x - ox;
+    const sy = s.y - oy;
+    const nx = -s.vx / Math.hypot(s.vx, s.vy);
+    const ny = -s.vy / Math.hypot(s.vx, s.vy);
+    const tx = sx + nx * s.len;
+    const ty = sy + ny * s.len;
+    const grad = ctx.createLinearGradient(sx, sy, tx, ty);
+    const a = Math.min(1, s.alpha * s.life * 2).toFixed(2);
+    grad.addColorStop(0, `rgba(255,255,255,${a})`);
+    grad.addColorStop(0.3, `rgba(220,230,255,${Math.min(1, s.alpha * s.life * 1.4).toFixed(2)})`);
+    grad.addColorStop(1, `rgba(180,200,255,0)`);
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(tx, ty);
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = Math.max(0.5, s.life * 1.5);
+    ctx.stroke();
   }
 }
 
@@ -117,10 +181,6 @@ const AWARD_LEVELS = new Set([
   ...Array.from({ length: 16 }, (_, i) => 30 + i * 2),
   ...Array.from({ length: 13 }, (_, i) => 63 + i * 3),
 ]);
-
-function upgradeGoldCost(currentLevel) {
-  return Math.floor(50 * Math.pow(1.5, currentLevel));
-}
 
 function getLevelInfo(totalXp) {
   let level = MAX_LEVEL;
@@ -175,6 +235,9 @@ function torusDelta(a, b, size) {
 let connected = false;
 let myId = null;
 let ws = null;
+let ping = 0;
+let pingT = 0;
+let pingInterval = null;
 
 function connectToGame(nickname) {
   localPlayer.nickname = nickname || 'Player';
@@ -186,9 +249,17 @@ function connectToGame(nickname) {
   params.set('color', selectedColor);
   ws = new WebSocket(`${protocol}//${location.host}/ws?${params.toString()}`);
 
-  ws.onopen  = () => { connected = true; };
-  ws.onclose = () => { connected = false; };
-  ws.onerror = () => { connected = false; };
+  ws.onopen  = () => {
+    connected = true;
+    pingInterval = setInterval(() => {
+      if (ws.readyState === 1) {
+        pingT = performance.now();
+        ws.send(JSON.stringify({ type: 'ping', t: pingT }));
+      }
+    }, 2000);
+  };
+  ws.onclose = () => { connected = false; clearInterval(pingInterval); };
+  ws.onerror = () => { connected = false; clearInterval(pingInterval); };
   ws.onmessage = handleMessage;
 }
 
@@ -226,11 +297,17 @@ let serverBullets = [];
 
 const keys = new Set();
 const upgradeFlashTime = new Array(UPGRADE_DEFS_CLIENT.length).fill(-1);
+let upgradeBarHidden = true;
+let upgradeBarSlideY = 112 + 32; // start fully off-screen (btnH + CORNER_PAD)
+let _prevUpgradePoints = 0;
 window.addEventListener("keydown", e => {
   const upgradeIdx = parseInt(e.key) - 1;
   if (upgradeIdx >= 0 && upgradeIdx < UPGRADE_DEFS_CLIENT.length) {
     sendUpgrade(UPGRADE_DEFS_CLIENT[upgradeIdx].id);
     upgradeFlashTime[upgradeIdx] = performance.now();
+  }
+  if (e.key === 'u' || e.key === 'U') {
+    upgradeBarHidden = !upgradeBarHidden;
   }
   keys.add(e.key.toLowerCase());
   if (e.key === ' ') e.preventDefault();
@@ -324,6 +401,10 @@ function handleMessage(event) {
     for (const [id] of remotePlayers) {
       if (!seen.has(id)) remotePlayers.delete(id);
     }
+  }
+
+  else if (msg.type === 'pong') {
+    ping = Math.round(performance.now() - pingT);
   }
 
   else if (msg.type === 'playerLeft') {
@@ -495,11 +576,10 @@ function update(dt) {
 
   checkLocalPlayerRockCollisions();
 
-  for (const s of stars) {
-    s.x = (s.x + s.vx * dt + canvas.width)  % canvas.width;
-    s.y = (s.y + s.vy * dt + canvas.height) % canvas.height;
-    s.phase += s.phaseSpeed * dt;
+  for (const layer of starLayers) {
+    for (const s of layer.stars) s.phase += s.phaseSpeed * dt;
   }
+  updateShootingStars(dt);
 }
 
 // --- Upgrade actions ---
@@ -510,6 +590,20 @@ function sendUpgrade(statId) {
   if (!ws || !connected || myId === null || ws.readyState !== 1) return;
   ws.send(JSON.stringify({ type: 'upgrade', stat: statId }));
 }
+
+// --- Cheat codes ---
+const CHEATS = ['hesoyam'];
+let cheatBuffer = '';
+window.addEventListener('keypress', e => {
+  if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+  cheatBuffer = (cheatBuffer + e.key).slice(-16);
+  for (const code of CHEATS) {
+    if (cheatBuffer.endsWith(code)) {
+      ws.send(JSON.stringify({ type: 'cheat', code }));
+      cheatBuffer = '';
+    }
+  }
+});
 
 canvas.addEventListener('click', e => {
   if (localPlayer.dead) return;
@@ -663,11 +757,15 @@ function drawGems(camX, camY) {
     const margin = 20;
     if (sx < -margin || sx > canvas.width + margin || sy < -margin || sy > canvas.height + margin) continue;
 
-    if (goldImg._loaded) {
-      ctx.drawImage(goldImg, sx - 7.5, sy - 7.5, 15, 15);
+    const coinType = g.coinType || 'small';
+    const size = COIN_SIZES[coinType] ?? 12;
+    const half = size / 2;
+    const img = coinImgs[coinType];
+    if (img && img._loaded) {
+      ctx.drawImage(img, sx - half, sy - half, size, size);
     } else {
       ctx.beginPath();
-      ctx.arc(sx, sy, 7.5, 0, Math.PI * 2);
+      ctx.arc(sx, sy, half, 0, Math.PI * 2);
       ctx.fillStyle = '#facc15';
       ctx.fill();
     }
@@ -684,9 +782,13 @@ function drawXpDrops(camX, camY) {
     const margin = 20;
     if (sx < -margin || sx > canvas.width + margin || sy < -margin || sy > canvas.height + margin) continue;
 
-    const img = xpImgs[x.id % 10];
+    const type = x.xpType || 'small';
+    const variant = ((x.xpVariant || 1) - 1);
+    const img = xpImgs[type][variant];
+    const size = XP_SIZES[type] ?? 16;
+    const half = size / 2;
     if (img._loaded) {
-      ctx.drawImage(img, sx - 10, sy - 10, 20, 20);
+      ctx.drawImage(img, sx - half, sy - half, size, size);
     } else {
       ctx.beginPath();
       ctx.arc(sx, sy, 2, 0, Math.PI * 2);
@@ -809,7 +911,7 @@ function drawMinimap() {
   // Self
   ctx.beginPath();
   ctx.arc(mx + half, my + half, 4, 0, Math.PI * 2);
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = localPlayer.color || '#ffffff';
   ctx.fill();
 
   // Death point (inside minimap)
@@ -832,6 +934,19 @@ function drawMinimap() {
   if (minimapFrameReady) {
     ctx.drawImage(minimapFrameImg, mx, my, MINIMAP_SIZE, MINIMAP_SIZE);
   }
+
+  // Coordinates + ping above minimap
+  ctx.save();
+  ctx.font = "13px Ticketing";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.fillText(
+    `X: ${Math.round(localPlayer.x)}; Y: ${Math.round(localPlayer.y)} | PING: ${ping}`,
+    mx + half,
+    my - 8
+  );
+  ctx.restore();
 
   // Death point outside minimap — dot on the contour pointing toward it
   if (deathPoint) {
@@ -890,9 +1005,38 @@ function drawUpgradeBar() {
   const totalW = SLOTS * btnW + (SLOTS - 1) * gap;
   const minimapX = canvas.width - CORNER_PAD - MINIMAP_SIZE;
   const startX = minimapX - 32 - totalW;
-  const startY = canvas.height - CORNER_PAD - btnH;
+
+  // Auto-show/hide only on transition so manual toggle isn't overridden every frame
+  const hasPoints = localPlayer.upgradePoints > 0;
+  if (hasPoints && _prevUpgradePoints === 0) upgradeBarHidden = false;
+  if (!hasPoints && _prevUpgradePoints > 0) upgradeBarHidden = true;
+  _prevUpgradePoints = localPlayer.upgradePoints;
+
+  const slideTarget = upgradeBarHidden ? btnH + CORNER_PAD : 0;
+  upgradeBarSlideY += (slideTarget - upgradeBarSlideY) * 0.15;
+
+  const startY = canvas.height - CORNER_PAD - btnH + upgradeBarSlideY;
+
+  // Label travels with the bar; when fully hidden it sits 8px above screen bottom
+  ctx.save();
+  ctx.font = '16px Ticketing';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'bottom';
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.fillText(
+    `press "U" to ${upgradeBarHidden ? 'open' : 'hide'}  |  ${localPlayer.upgradePoints ?? 0} points available`,
+    startX + totalW, Math.min(startY - 8, canvas.height - CORNER_PAD)
+  );
+  ctx.restore();
 
   upgradeHitBoxes.length = 0;
+
+  if (upgradeBarSlideY >= btnH + CORNER_PAD - 2) return;
+
+  // Dim shadow behind all upgrade buttons
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  roundRect(ctx, startX - 10, startY - 10, totalW + 20, btnH + 20, 18);
+  ctx.fill();
 
   for (let i = 0; i < SLOTS; i++) {
     const def = UPGRADE_DEFS_CLIENT[i];
@@ -904,6 +1048,8 @@ function drawUpgradeBar() {
     const hasPoint  = localPlayer.upgradePoints >= 1;
     const canAfford = !maxed && hasPoint;
     const hovered   = mouseX >= bx && mouseX <= bx + btnW && mouseY >= by && mouseY <= by + btnH;
+
+    ctx.globalAlpha = (!hasPoint && !maxed) ? 0.35 : 1;
 
     // Base texture
     const img = upgradeImgs[def.id];
@@ -970,15 +1116,10 @@ function drawUpgradeBar() {
     if (maxed) {
       ctx.fillStyle = 'rgba(255,215,0,0.85)';
       ctx.fillText('MAX', bx + btnW / 2, by + 101);
-    } else if (!hasPoint) {
-      ctx.fillStyle = 'rgba(255,255,255,0.3)';
-      ctx.fillText('no pts', bx + btnW / 2, by + 101);
-    } else {
-      ctx.fillStyle = '#4ade80';
-      ctx.fillText('upgrade!', bx + btnW / 2, by + 101);
     }
 
     upgradeHitBoxes.push({ x: bx, y: by, w: btnW, h: btnH, id: def.id });
+    ctx.globalAlpha = 1;
   }
 
   ctx.textAlign = 'left';
@@ -997,12 +1138,9 @@ function drawHUD() {
   ctx.fillStyle = "#4ade80";
   ctx.fillText(`XP: ${localPlayer.xpCount}`, pad, pad + 28);
 
-  ctx.fillStyle = "#818cf8";
-  ctx.fillText(`Points: ${localPlayer.upgradePoints}`, pad, pad + 56);
-
   ctx.font = "14px Ticketing";
   ctx.fillStyle = "rgba(255,255,255,0.6)";
-  ctx.fillText(`Players online: ${remotePlayers.size + 1}`, pad, pad + 84);
+  ctx.fillText(`Players online: ${remotePlayers.size + 1}`, pad, pad + 56);
 
   ctx.textAlign = "right";
   ctx.fillStyle = "rgba(255,255,255,0.85)";
@@ -1052,21 +1190,33 @@ function draw() {
   ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  for (const s of stars) {
-    const alpha = s.base * (0.6 + 0.4 * Math.sin(s.phase));
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(180,180,180,${alpha.toFixed(2)})`;
-    ctx.fill();
+  const camX = localPlayer.x;
+  const camY = localPlayer.y;
+  for (const layer of starLayers) {
+    const ox = ((camX * layer.parallax) % PARALLAX_TILE + PARALLAX_TILE) % PARALLAX_TILE;
+    const oy = ((camY * layer.parallax) % PARALLAX_TILE + PARALLAX_TILE) % PARALLAX_TILE;
+    for (const s of layer.stars) {
+      const a = (s.alpha * (0.7 + 0.3 * Math.sin(s.phase))).toFixed(2);
+      for (let tx = -1; tx <= 1; tx++) {
+        for (let ty = -1; ty <= 1; ty++) {
+          const sx = s.x - ox + tx * PARALLAX_TILE;
+          const sy = s.y - oy + ty * PARALLAX_TILE;
+          if (sx < -s.r || sx > canvas.width + s.r || sy < -s.r || sy > canvas.height + s.r) continue;
+          ctx.beginPath();
+          ctx.arc(sx, sy, s.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(200,210,255,${a})`;
+          ctx.fill();
+        }
+      }
+    }
   }
+  drawShootingStars(camX, camY);
 
   if (!connected || myId === null) {
     drawConnecting();
     return;
   }
 
-  const camX = localPlayer.x;
-  const camY = localPlayer.y;
   drawRocks(camX, camY);
   drawGems(camX, camY);
   drawXpDrops(camX, camY);
